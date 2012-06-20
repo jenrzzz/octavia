@@ -5,6 +5,9 @@
 </div>
 <div class="row">
     <div class="span8">
+        <% if @tracks.size <= 0 %>
+            <p>There are currently no tracks added.</p>
+        <% end %>
         <ul>
         <% @tracks.each do |track| %>
             <li><a href="/<%= track.id %>"><%= track.title %></a> by <%= track.artist %></li>
