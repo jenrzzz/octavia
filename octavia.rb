@@ -40,7 +40,11 @@ DataMapper.finalize.auto_upgrade!
 
 helpers do
   def lastfm_get_artwork(artist, album)
-    info = $LAST_FM.album.get_info artist, album
+    begin
+      info = $LAST_FM.album.get_info artist, album
+    rescue Lastfm::ApiError
+      return "/img/artwork_missing.png"
+    end
     info['image'].each do |item|
       if item['size'] == 'extralarge' && item['content']
         return item['content'].strip
@@ -49,7 +53,7 @@ helpers do
     if not info['image'].empty?
       return info['image'][0]['content']
     else
-      "/img/artwork-missing.png"
+      "/img/artwork_missing.png"
     end
   end
 
@@ -70,31 +74,37 @@ get '/new' do
 end
 
 post '/new' do
+  # Check if the upload is too large (>15 MiB) and return a 413 Request too large
   if request.env['CONTENT_LENGTH'].to_i > 15728640
     status 413
     return "That upload is too large. Try to keep it under 15 megabytes."
   end
+
+  # Handle the uploaded file and make sure it's the right type. TagLib can handle
+  # MP3 and MPEG-4 audio files
   upload = params[:file]
   return %[No file uploaded. <a href="/new">Try again?</a>] if not upload
   filename = Time.now.strftime('%Y%m%d%H%M%S-') + File.basename((upload[:filename].gsub(/ /, '_').downcase))
   unless ['audio/x-m4a', 'audio/mpeg', 'audio/mp3'].include? upload[:type]
-    puts "Upload type is #{upload[:type]} instead of audio/mpeg"
     status 400
     return %[That wasn't an MP3 file. <a href="/new">Try again?</a>]
   end
   File.open("files/#{filename}", 'w') do |f|
     f.write upload[:tempfile].read
   end
+
+  # Lookup the tags, pull artwork from Last.fm, and save the resource
   tags = TagLib::File.new("files/#{filename}")
-  unless tags.title && tags.artist && tags.album
+  if tags.title.to_s.empty? || tags.artist.to_s.empty? || tags.album.to_s.empty?
     status 400
     return "Could not process the ID3 tags on that track."
   end
   @track = Track.new
-  @track.title = tags.title
-  @track.artist = tags.artist
-  @track.album = tags.album
-  @track.artwork = lastfm_get_artwork tags.artist, tags.album
+  @track.title = tags.title.to_s
+  @track.artist = tags.artist.to_s
+  @track.album = tags.album.to_s
+  @track.artwork = lastfm_get_artwork ("asdasd" + tags.artist.to_s + "asdasdas"), ("aosidjaosd" + tags.album.to_s + "eroijeorisjdfosijdf")
+  # @track.artwork = lastfm_get_artwork tags.artist.to_s, tags.album.to_s
   @track.path = "files/#{filename}"
   @track.date_uploaded = Time.now
   @track.delete_key = generate_delete_key
