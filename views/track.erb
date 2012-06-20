@@ -17,7 +17,7 @@
     <div class="span2">
         <img src="<%= @track.artwork %>" alt="<%= @track.album %>" />
     </div>
-    <div class="span4 well">
+    <div class="span4 well" style="padding-bottom: 10px;">
         <table class="table table-condensed">
             <tr><td><strong>Title</strong></td><td><%= @track.title %></td></tr>
             <tr><td><strong>Artist</strong></td><td><%= @track.artist %></td></tr>
@@ -43,6 +43,6 @@
             </fieldset>
             </form>
         </p>
-        <p><label>Permalink</label><input class="span2 uneditable-input" type="text" value="<%= "http://#{request.host_with_port}/#{@track.id}" %>" /></p>
+        <p><label>Permalink</label><input class="span2 uneditable-input" type="text" value="<%= "http://#{request.host}/#{@track.id}" %>" /></p>
     </div>
 </div>

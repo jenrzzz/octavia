@@ -42,9 +42,14 @@ helpers do
   def lastfm_get_artwork(artist, album)
     info = $LAST_FM.album.get_info artist, album
     info['image'].each do |item|
-      if item['size'] == 'extralarge'
+      if item['size'] == 'extralarge' && item['content']
         return item['content'].strip
       end
+    end
+    if not info['image'].empty?
+      return info['image'][0]['content']
+    else
+      "/img/artwork-missing.png"
     end
   end
 
@@ -65,6 +70,10 @@ get '/new' do
 end
 
 post '/new' do
+  if request.env['CONTENT_LENGTH'].to_i > 15728640
+    status 413
+    return "That upload is too large. Try to keep it under 15 megabytes."
+  end
   upload = params[:file]
   return %[No file uploaded. <a href="/new">Try again?</a>] if not upload
   filename = Time.now.strftime('%Y%m%d%H%M%S-') + File.basename((upload[:filename].gsub(/ /, '_').downcase))
@@ -77,11 +86,15 @@ post '/new' do
     f.write upload[:tempfile].read
   end
   tags = TagLib::File.new("files/#{filename}")
+  unless tags.title && tags.artist && tags.album
+    status 400
+    return "Could not process the ID3 tags on that track."
+  end
   @track = Track.new
   @track.title = tags.title
   @track.artist = tags.artist
   @track.album = tags.album
-  @track.artwork = lastfm_get_artwork tags.artist, tags.title
+  @track.artwork = lastfm_get_artwork tags.artist, tags.album
   @track.path = "files/#{filename}"
   @track.date_uploaded = Time.now
   @track.delete_key = generate_delete_key
