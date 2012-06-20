@@ -103,8 +103,7 @@ post '/new' do
   @track.title = tags.title.to_s
   @track.artist = tags.artist.to_s
   @track.album = tags.album.to_s
-  @track.artwork = lastfm_get_artwork ("asdasd" + tags.artist.to_s + "asdasdas"), ("aosidjaosd" + tags.album.to_s + "eroijeorisjdfosijdf")
-  # @track.artwork = lastfm_get_artwork tags.artist.to_s, tags.album.to_s
+  @track.artwork = lastfm_get_artwork tags.artist.to_s, tags.album.to_s
   @track.path = "files/#{filename}"
   @track.date_uploaded = Time.now
   @track.delete_key = generate_delete_key
