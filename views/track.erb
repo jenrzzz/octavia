@@ -1,5 +1,15 @@
 <div class="row">
     <div class="span8">
+        <% if flash[:deletekey] %>
+            <div class="alert alert-info">
+                <p>Your delete key is <code><%= flash[:deletekey] %></code>. You'll need this code if you want to delete your upload.</p>
+            </div>
+        <% end %>
+        <% if flash[:error] %>
+            <div class="alert alert-error">
+                <p><%= flash[:error] %></p>
+            </div>
+        <% end %>
         <h2><strong><%= @track.title %></strong> by <em><%= @track.artist %></em></h2>
     </div>
 </div>&nbsp;
@@ -17,6 +27,22 @@
             <source src="<%= '/' + @track.path %>" type="audio/mp3" />
             Your browser does not support the audio tag. Download the track below.
         </audio>
-        <p><a class="btn btn-primary btn-small" href="<%= '/' + @track.path %>">Download track</a></p>
+    </div>
+</div>
+<div class="row">
+    <div class="span2">
+        &nbsp;
+    </div>
+    <div class="span4 well">
+        <p><a class="btn btn-primary" href="<%= '/' + @track.path %>">Download track</a></p>
+        <p><form action="/<%= @track.id %>" method="post">
+            <fieldset>
+                <input type="hidden" name="_method" value="delete" />
+                <input type="text" name="key" placeholder="Delete key" style="width: 25%; margin-top: 8px" /><br />
+                <input type="submit" class="btn btn-danger" value="Delete track" />
+            </fieldset>
+            </form>
+        </p>
+        <p><label>Permalink</label><input class="span2 uneditable-input" type="text" value="<%= "http://#{request.host_with_port}/#{@track.id}" %>" /></p>
     </div>
 </div>

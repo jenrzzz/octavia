@@ -1,4 +1,5 @@
 require 'sinatra'
+require 'sinatra/flash'
 require 'data_mapper'
 require 'taglib'
 require 'lastfm'
@@ -16,19 +17,23 @@ APP_SETTINGS = YAML.load(File.open(File.join(File.dirname(__FILE__), 'app.yml'))
 
 $LAST_FM = Lastfm.new(APP_SETTINGS['lastfm']['key'], APP_SETTINGS['lastfm']['secret'])
 $LAST_FM_TOKEN = $LAST_FM.auth.get_token
-set :environment, :production
+
 configure do
-  enable :static, :logging
+  enable :static, :logging, :sessions
 end
+
+set :protection, except: :session_hijacking
 
 class Track
   include DataMapper::Resource
-  property :id,       Serial
-  property :title,    String, :length => 255
-  property :artist,   String, :length => 255
-  property :album,    String, :length => 255
-  property :artwork,  String, :length => 255
-  property :path,     String, :length => 255
+  property :id,             Serial
+  property :title,          String, :length => 255
+  property :artist,         String, :length => 255
+  property :album,          String, :length => 255
+  property :artwork,        String, :length => 255
+  property :path,           String, :length => 255
+  property :date_uploaded,  DateTime
+  property :delete_key,     String
 end
 
 DataMapper.finalize.auto_upgrade!
@@ -42,11 +47,15 @@ helpers do
       end
     end
   end
+
+  def generate_delete_key
+    ('a'..'z').to_a.shuffle[0,8].join
+  end
 end
 
 get '/' do
   @title = "All tracks"
-  @tracks = Track.all :order => [ :artist.asc ]
+  @tracks = Track.all :order => [ :date_uploaded.desc ]
   erb :index
 end
 
@@ -57,8 +66,9 @@ end
 
 post '/new' do
   upload = params[:file]
-  filename = Time.now.strftime('%Y%m%d%H%M%S-') + (upload[:filename].gsub(/ /, '_').downcase)
-  unless ['audio/mpeg', 'audio/mp3'].include? upload[:type]
+  return %[No file uploaded. <a href="/new">Try again?</a>] if not upload
+  filename = Time.now.strftime('%Y%m%d%H%M%S-') + File.basename((upload[:filename].gsub(/ /, '_').downcase))
+  unless ['audio/x-m4a', 'audio/mpeg', 'audio/mp3'].include? upload[:type]
     puts "Upload type is #{upload[:type]} instead of audio/mpeg"
     status 400
     return %[That wasn't an MP3 file. <a href="/new">Try again?</a>]
@@ -73,6 +83,9 @@ post '/new' do
   @track.album = tags.album
   @track.artwork = lastfm_get_artwork tags.artist, tags.title
   @track.path = "files/#{filename}"
+  @track.date_uploaded = Time.now
+  @track.delete_key = generate_delete_key
+  flash[:deletekey] = @track.delete_key
   if not @track.save
     puts "---------- error saving #{@track.title} ------------ "
     @track.errors.each do |e|
@@ -87,19 +100,39 @@ end
 
 get '/:id' do
   @track = Track.get params[:id].to_i
-  @title = "#{@track.title} by #{@track.artist}"
   if not @track
     status 404
-    "Could not find a track with that ID."
+    return "Could not find a track with that ID. It may have been deleted."
   end
+  @title = "#{@track.title} by #{@track.artist}"
   erb :track
+end
+
+delete '/:id' do
+  @track = Track.get params[:id].to_i
+  if not @track
+    status 404
+    return "Could not find a track with that ID. It may have been deleted."
+  end
+  if @track.delete_key != params[:key]
+    flash[:error] = "The provided delete key was incorrect."
+    redirect "/#{params[:id]}"
+  end
+  FileUtils.rm(File.join('files', File.basename(@track.path)))
+  if @track.destroy
+    flash[:info] = "Successfully deleted #{@track.title} by #{@track.artist}."
+    redirect "/"
+  else
+    status 500
+    "There was a problem deleting that track."
+  end
 end
 
 get '/files/:file' do
   file = File.join('files', params[:file])
   if not file
     status 404
-    "Could not find a track by that name."
+    return "Could not find a track by that name."
   end
   send_file(file, :disposition => 'attachment', :filename => File.basename(file))
 end
