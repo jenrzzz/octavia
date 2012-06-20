@@ -5,15 +5,18 @@ Named after [Octavia](http://mlp.wikia.com/wiki/Octavia) 'cause she's kind of a 
 
 #### Installing ####
 Need:
-* Sinatra
-* taglib
-* libmagic (or a newish version of file)
+* [Sinatra](http://www.sinatrarb.com/)
+* [taglib](http://developer.kde.org/~wheeler/taglib.html)
+* [ruby-taglib](http://www.hakubi.us/ruby-taglib/)
+   Note that you need to change line 40 of ```taglib.rb``` from ```DL::Importable``` to ```DL::Importer``` for 1.9
+* dl
+* libmagic (or a newish version of [file](ftp://ftp.astron.com/pub/file/))
 * DataMapper
 * sqlite3
-* ruby-lastfm
+* [ruby-lastfm](https://github.com/youpy/ruby-lastfm)
 * xmlsimple
 
-Get an API key from Last.fm and put it into app.yml in the root of the application.
+Get an API key from Last.fm and put it into ```app.yml``` in the root of the application.
 (example)
 ```
     lastfm:
