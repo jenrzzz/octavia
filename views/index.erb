@@ -1,0 +1,14 @@
+<div class="row">
+    <div class="span8">
+        <h2>Tracks</h2>
+    </div>
+</div>
+<div class="row">
+    <div class="span8">
+        <ul>
+        <% @tracks.each do |track| %>
+            <li><a href="/<%= track.id %>"><%= track.title %></a> by <%= track.artist %></li>
+        <% end %>
+        </ul>
+    </div>
+</div>

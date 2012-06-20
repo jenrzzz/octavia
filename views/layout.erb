@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title><%= @title || 'Page' %> &mdash; Octavia</title>
+        <link rel="stylesheet" type="text/css" href="/styles/bootstrap.min.css" />
+        <link rel="stylesheet" type="text/css" href="/styles/bootstrap-responsive.min.css" />
+        
+        <script type="application/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+        <script type="application/javascript" src="/js/bootstrap.min.js"></script>
+        
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body>
+        <div class="container">
+            <%= yield %>
+        </div>
+    </body>
+</html>

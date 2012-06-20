@@ -1,0 +1,22 @@
+<div class="row">
+    <div class="span8">
+        <h2><strong><%= @track.title %></strong> by <em><%= @track.artist %></em></h2>
+    </div>
+</div>&nbsp;
+<div class="row">
+    <div class="span2">
+        <img src="<%= @track.artwork %>" alt="<%= @track.album %>" />
+    </div>
+    <div class="span4 well">
+        <table class="table table-condensed">
+            <tr><td><strong>Title</strong></td><td><%= @track.title %></td></tr>
+            <tr><td><strong>Artist</strong></td><td><%= @track.artist %></td></tr>
+            <tr><td><strong>Album</strong></td><td><%= @track.album %></td></tr>
+        </table>
+        <audio controls="controls" autoplay="autoplay" style="width: 100%;">
+            <source src="<%= '/' + @track.path %>" type="audio/mp3" />
+            Your browser does not support the audio tag. Download the track below.
+        </audio>
+        <p><a class="btn btn-primary btn-small" href="<%= '/' + @track.path %>">Download track</a></p>
+    </div>
+</div>
