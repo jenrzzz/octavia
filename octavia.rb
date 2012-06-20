@@ -5,7 +5,7 @@ require 'lastfm'
 require 'yaml'
 require 'xmlsimple'
 
-DataMapper::Logger.new(STDOUT, :debug)
+# DataMapper::Logger.new(STDOUT, :debug)
 DataMapper.setup :default, "sqlite3://#{Dir.pwd}/data.db"
 
 if not Dir.exists? 'files'
@@ -16,7 +16,7 @@ APP_SETTINGS = YAML.load(File.open(File.join(File.dirname(__FILE__), 'app.yml'))
 
 $LAST_FM = Lastfm.new(APP_SETTINGS['lastfm']['key'], APP_SETTINGS['lastfm']['secret'])
 $LAST_FM_TOKEN = $LAST_FM.auth.get_token
-
+set :environment, :production
 configure do
   enable :static, :logging
 end
