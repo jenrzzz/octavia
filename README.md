@@ -15,7 +15,9 @@ Need:
 
 Get an API key from Last.fm and put it into app.yml in the root of the application.
 (example)
+```
     lastfm:
             key:    '<api key>'
             secret: '<api secret>'
+```
 And run it. Use Daemons if you want to daemonize it.
