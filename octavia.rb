@@ -43,17 +43,8 @@ class Track
 end
 
 class Lastfm::MethodCategory::Track
-  regular_method :get_buylinks, [:artist, :track], [] do |response|
+  regular_method :get_buylinks, [:artist, :track, :country], [[:mbid, nil]] do |response|
     response.xml['affiliations']
-  end
-end
-
-def scavenge_tracks
-  old_tracks = Track.all :date_uploaded.lt => (Time.now - 60 * 60 * 24 * 30) # tracks > 30 days old
-  old_tracks.each do |track|
-    FileUtils.rm(File.join('files', File.basename(track.path)))
-    track.path = nil
-    track.save
   end
 end
 
@@ -76,23 +67,39 @@ helpers do
     end
   end
 
-  def lastfm_get_buylink(artist, title)
-    begin
-      links = $LAST_FM.track.get_buylinks artist, title
-    rescue Lastfm::ApiError
-      return nil
-    end
-    buylinks = {}
-    links['downloads'].each do |affiliate|
-      if ['Amazon MP3', 'iTunes'].include? affiliate['supplierName']
-        buylinks[affiliate['supplierName']] = affiliate['buyLink']
-      end
-    end
-    return buylinks['iTunes'] || buylinks['Amazon MP3']
-  end
-
   def generate_delete_key
     ('a'..'z').to_a.shuffle[0,8].join
+  end
+end
+
+def lastfm_get_buylink(artist, title)
+  begin
+    links = $LAST_FM.track.get_buylinks :artist => artist, :track => title, :country => 'United States'
+  rescue Lastfm::ApiError => e
+    return nil
+  end
+  buylinks = {}
+  links['downloads']['affiliation'].each do |affiliate|
+      if ['Amazon MP3', 'iTunes'].include? affiliate['supplierName']
+      buylinks[affiliate['supplierName'].to_s] = affiliate['buyLink']
+    end
+  end
+  return buylinks['iTunes'] || buylinks['Amazon MP3']
+end
+
+def scavenge_tracks
+  old_tracks = Track.all :date_uploaded.lt => (Time.now - 60 * 60 * 24 * 30) # tracks > 30 days old
+  old_tracks.each do |track|
+    # next if track.buylink
+    begin
+      FileUtils.rm(File.join('files', File.basename(track.path))) if track.path
+    rescue Errno::ENOENT
+    end
+    track.path = nil
+    if not track.buylink
+      track.buylink = lastfm_get_buylink(track.artist, track.title)
+    end
+    track.save
   end
 end
 
@@ -112,7 +119,7 @@ end
 
 post '/new' do
   # Check if the upload is too large (>15 MiB) and return a 413 Request too large
-  if request.env['CONTENT_LENGTH'].to_i > 15728640
+  if request.env['CONTENT_LENGTH'].to_i > 20728640
     status 413
     return "That upload is too large. Try to keep it under 15 megabytes."
   end
