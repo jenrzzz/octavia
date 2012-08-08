@@ -47,7 +47,15 @@ class Lastfm::MethodCategory::Track
     response.xml['affiliations']
   end
 end
-DataMapper.finalize.auto_upgrade!
+
+def scavenge_tracks
+  old_tracks = Track.all :date_uploaded.lt => (Time.now - 60 * 60 * 24 * 30) # tracks > 30 days old
+  old_tracks.each do |track|
+    FileUtils.rm(File.join('files', File.basename(track.path)))
+    track.path = nil
+    track.save
+  end
+end
 
 helpers do
   def lastfm_get_artwork(artist, album)
@@ -87,6 +95,9 @@ helpers do
     ('a'..'z').to_a.shuffle[0,8].join
   end
 end
+
+DataMapper.finalize.auto_upgrade!
+scavenge_tracks
 
 get '/' do
   @title = "All tracks"
@@ -198,10 +209,5 @@ end
 ## Housekeeping
 scheduler = Rufus::Scheduler.start_new
 scheduler.every '1d' do
-  old_tracks = Track.all :date_uploaded.lt => (Time.now - 60 * 60 * 24 * 30) # tracks > 30 days old
-  old_tracks.each do |track|
-    FileUtils.rm(File.join('files', File.basename(track.path)))
-    track.path = nil
-    track.save
-  end
+  scavenge_tracks
 end
