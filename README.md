@@ -13,6 +13,6 @@ Get an API key from Last.fm and put it into ```app.yml``` in the root of the app
     lastfm:
             key:    '<api key>'
             secret: '<api secret>'
-    master_delete_key: 'toomanysecrets'
+    master_delete_key: '<toomanysecrets>'
 ```
 And run it. Use Daemons if you want to daemonize it.
