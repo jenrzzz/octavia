@@ -1,0 +1,11 @@
+source :rubygems
+gem 'thin'
+gem 'sinatra'
+gem 'activesupport'
+gem 'daemons'
+gem 'datamapper'
+gem 'dm-sqlite-adapter'
+gem 'taglib2'
+gem 'lastfm'
+gem 'rufus-scheduler'
+gem 'sinatra-flash'
