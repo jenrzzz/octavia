@@ -23,10 +23,14 @@
             <tr><td><strong>Artist</strong></td><td><%= @track.artist %></td></tr>
             <tr><td><strong>Album</strong></td><td><%= @track.album %></td></tr>
         </table>
-        <audio controls="controls" autoplay="autoplay" style="width: 100%;">
-            <source src="<%= '/' + @track.path %>" type="audio/mp3" />
-            Your browser does not support the audio tag. Download the track below.
-        </audio>
+        <% if @track.path %>
+            <audio controls="controls" autoplay="autoplay" style="width: 100%;">
+                <source src="<%= '/' + @track.path %>" type="audio/mp3" />
+                Your browser does not support the audio tag. Download the track below.
+            </audio>
+        <% else %>
+            <p>Sorry, but this track has expired.</p>
+        <% end %>
     </div>
 </div>
 <div class="row">
@@ -34,7 +38,9 @@
         &nbsp;
     </div>
     <div class="span4 well">
-        <p><a class="btn btn-primary" href="<%= '/' + @track.path %>">Download track</a></p>
+        <% if @track.path %>
+            <p><a class="btn btn-primary" href="<%= '/' + @track.path %>">Download track</a></p>
+        <% end %>
         <p><form action="/<%= @track.id %>" method="post">
             <fieldset>
                 <input type="hidden" name="_method" value="delete" />

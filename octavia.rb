@@ -1,16 +1,21 @@
 require 'sinatra'
 require 'sinatra/flash'
 require 'data_mapper'
-require 'taglib'
+require 'taglib2'
 require 'lastfm'
 require 'yaml'
 require 'xmlsimple'
+require 'rufus/scheduler'
 
-# DataMapper::Logger.new(STDOUT, :debug)
-DataMapper.setup :default, "sqlite3://#{Dir.pwd}/data.db"
+# DataMapper::Logger.new(STDOUT, :debug)a
+$WD = File.dirname(__FILE__)
+if $WD == '.'
+  $WD = Dir.pwd
+end
+DataMapper.setup :default, "sqlite3://#{File.join($WD, 'data.db')}"
 
-if not Dir.exists? 'files'
-  Dir.mkdir 'files'
+if not Dir.exists?(File.join($WD, 'files'))
+  Dir.mkdir(File.join($WD, 'files'))
 end
 
 APP_SETTINGS = YAML.load(File.open(File.join(File.dirname(__FILE__), 'app.yml')))
@@ -22,7 +27,7 @@ configure do
   enable :static, :logging, :sessions
 end
 
-set :protection, except: :session_hijacking
+set :protection, :except => :session_hijacking
 
 class Track
   include DataMapper::Resource
@@ -32,10 +37,16 @@ class Track
   property :album,          String, :length => 255
   property :artwork,        String, :length => 255
   property :path,           String, :length => 255
+  property :buylink,        String, :length => 255
   property :date_uploaded,  DateTime
   property :delete_key,     String
 end
 
+class Lastfm::MethodCategory::Track
+  regular_method :get_buylinks, [:artist, :track], [] do |response|
+    response.xml['affiliations']
+  end
+end
 DataMapper.finalize.auto_upgrade!
 
 helpers do
@@ -57,6 +68,21 @@ helpers do
     end
   end
 
+  def lastfm_get_buylink(artist, title)
+    begin
+      links = $LAST_FM.track.get_buylinks artist, title
+    rescue Lastfm::ApiError
+      return nil
+    end
+    buylinks = {}
+    links['downloads'].each do |affiliate|
+      if ['Amazon MP3', 'iTunes'].include? affiliate['supplierName']
+        buylinks[affiliate['supplierName']] = affiliate['buyLink']
+      end
+    end
+    return buylinks['iTunes'] || buylinks['Amazon MP3']
+  end
+
   def generate_delete_key
     ('a'..'z').to_a.shuffle[0,8].join
   end
@@ -64,7 +90,7 @@ end
 
 get '/' do
   @title = "All tracks"
-  @tracks = Track.all :order => [ :date_uploaded.desc ]
+  @tracks = Track.all( :date_uploaded.gt => (Time.now - (60 * 60 * 24 * 30)), :order => [ :date_uploaded.desc ] )
   erb :index
 end
 
@@ -84,17 +110,20 @@ post '/new' do
   # MP3 and MPEG-4 audio files
   upload = params[:file]
   return %[No file uploaded. <a href="/new">Try again?</a>] if not upload
-  filename = Time.now.strftime('%Y%m%d%H%M%S-') + File.basename((upload[:filename].gsub(/ /, '_').downcase))
   unless ['audio/x-m4a', 'audio/mpeg', 'audio/mp3'].include? upload[:type]
     status 400
     return %[That wasn't an MP3 file. <a href="/new">Try again?</a>]
   end
-  File.open("files/#{filename}", 'w') do |f|
+  track_tempfile = {}
+  track_tempfile[:id] = Time.now.strftime("%Y%m%d%H%M%S_#{Random.new.rand(10..99)}")
+  track_tempfile[:ext] = File.extname(upload[:filename])
+  track_tempfile[:name] = "#{track_tempfile[:id]}-temp#{track_tempfile[:ext]}"
+  File.open("files/#{track_tempfile[:name]}", 'w') do |f|
     f.write upload[:tempfile].read
   end
 
   # Lookup the tags, pull artwork from Last.fm, and save the resource
-  tags = TagLib::File.new("files/#{filename}")
+  tags = TagLib2::File.new("files/#{track_tempfile[:name]}")
   if tags.title.to_s.empty? || tags.artist.to_s.empty? || tags.album.to_s.empty?
     status 400
     return "Could not process the ID3 tags on that track."
@@ -104,20 +133,21 @@ post '/new' do
   @track.artist = tags.artist.to_s
   @track.album = tags.album.to_s
   @track.artwork = lastfm_get_artwork tags.artist.to_s, tags.album.to_s
-  @track.path = "files/#{filename}"
+  @track.path = "files/#{track_tempfile[:id]}_#{tags.title.to_s.gsub(/ /, '_')}#{track_tempfile[:ext]}"
   @track.date_uploaded = Time.now
   @track.delete_key = generate_delete_key
   flash[:deletekey] = @track.delete_key
+  @track.buylink = lastfm_get_buylink @track.artist, @track.title
   if not @track.save
     puts "---------- error saving #{@track.title} ------------ "
     @track.errors.each do |e|
       puts e.to_s
     end
     status 500
-    'Unable to save new track.'
-  else
-    redirect "/#{@track.id}"
+    return 'Unable to save new track.'
   end
+  FileUtils.mv "files/#{track_tempfile[:name]}", @track.path
+  redirect "/#{@track.id}"
 end
 
 get '/:id' do
@@ -134,9 +164,14 @@ delete '/:id' do
   @track = Track.get params[:id].to_i
   if not @track
     status 404
-    return "Could not find a track with that ID. It may have been deleted."
+    return <<-END
+      <html><head><title>Missing track</title></head><body>
+      <p>Could not find a track with that ID. It may have been deleted.</p>
+      <p><a href="/">Click here</a> to return.</p>
+      </body></html>
+    END
   end
-  if @track.delete_key != params[:key]
+  if not [APP_SETTINGS['master_delete_key'], @track.delete_key].include? params[:key]
     flash[:error] = "The provided delete key was incorrect."
     redirect "/#{params[:id]}"
   end
@@ -157,4 +192,16 @@ get '/files/:file' do
     return "Could not find a track by that name."
   end
   send_file(file, :disposition => 'attachment', :filename => File.basename(file))
+end
+
+
+## Housekeeping
+scheduler = Rufus::Scheduler.start_new
+scheduler.every '1d' do
+  old_tracks = Track.all :date_uploaded.lt => (Time.now - 60 * 60 * 24 * 30) # tracks > 30 days old
+  old_tracks.each do |track|
+    FileUtils.rm(File.join('files', File.basename(track.path)))
+    track.path = nil
+    track.save
+  end
 end
