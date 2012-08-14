@@ -24,7 +24,7 @@ $LAST_FM = Lastfm.new(APP_SETTINGS['lastfm']['key'], APP_SETTINGS['lastfm']['sec
 $LAST_FM_TOKEN = $LAST_FM.auth.get_token
 
 configure do
-  enable :static, :logging, :sessions
+  enable :static, :sessions
 end
 
 set :protection, :except => :session_hijacking
@@ -134,14 +134,18 @@ post '/new' do
   end
   track_tempfile = {}
   track_tempfile[:id] = Time.now.strftime("%Y%m%d%H%M%S_#{Random.new.rand(10..99)}")
-  track_tempfile[:ext] = File.extname(upload[:filename])
+  track_tempfile[:ext] = File.extname(upload[:filename].gsub(/[^0-9A-Za-z\.]/i, ''))
   track_tempfile[:name] = "#{track_tempfile[:id]}-temp#{track_tempfile[:ext]}"
   File.open("files/#{track_tempfile[:name]}", 'w') do |f|
     f.write upload[:tempfile].read
   end
 
   # Lookup the tags, pull artwork from Last.fm, and save the resource
-  tags = TagLib2::File.new("files/#{track_tempfile[:name]}")
+  begin
+    tags = TagLib2::File.new("files/#{track_tempfile[:name]}")
+  rescue TagLib2::BadFile
+    return "Could not process the ID3 tags on that file."
+  end
   if tags.title.to_s.empty? || tags.artist.to_s.empty? || tags.album.to_s.empty?
     status 400
     return "Could not process the ID3 tags on that track."
