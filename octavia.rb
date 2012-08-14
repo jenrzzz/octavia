@@ -28,6 +28,7 @@ configure do
 end
 
 set :protection, :except => :session_hijacking
+use Rack::Logger
 
 class Track
   include DataMapper::Resource
@@ -70,36 +71,36 @@ helpers do
   def generate_delete_key
     ('a'..'z').to_a.shuffle[0,8].join
   end
-end
 
-def lastfm_get_buylink(artist, title)
-  begin
-    links = $LAST_FM.track.get_buylinks :artist => artist, :track => title, :country => 'United States'
-  rescue Lastfm::ApiError => e
-    return nil
-  end
-  buylinks = {}
-  links['downloads']['affiliation'].each do |affiliate|
-      if ['Amazon MP3', 'iTunes'].include? affiliate['supplierName']
-      buylinks[affiliate['supplierName'].to_s] = affiliate['buyLink']
-    end
-  end
-  return buylinks['iTunes'] || buylinks['Amazon MP3']
-end
-
-def scavenge_tracks
-  old_tracks = Track.all :date_uploaded.lt => (Time.now - 60 * 60 * 24 * 30) # tracks > 30 days old
-  old_tracks.each do |track|
-    next if track.buylink
+  def lastfm_get_buylink(artist, title)
     begin
-      FileUtils.rm(File.join('files', File.basename(track.path))) if track.path
-    rescue Errno::ENOENT
+      links = $LAST_FM.track.get_buylinks :artist => artist, :track => title, :country => 'United States'
+    rescue Lastfm::ApiError => e
+      return nil
     end
-    track.path = nil
-    if not track.buylink
-      track.buylink = lastfm_get_buylink(track.artist, track.title)
+    buylinks = {}
+    links['downloads']['affiliation'].each do |affiliate|
+        if ['Amazon MP3', 'iTunes'].include? affiliate['supplierName']
+        buylinks[affiliate['supplierName'].to_s] = affiliate['buyLink']
+      end
     end
-    track.save
+    return buylinks['iTunes'] || buylinks['Amazon MP3']
+  end
+
+  def scavenge_tracks
+    old_tracks = Track.all :date_uploaded.lt => (Time.now - 60 * 60 * 24 * 30) # tracks > 30 days old
+    old_tracks.each do |track|
+      next if track.buylink
+      begin
+        FileUtils.rm(File.join('files', File.basename(track.path))) if track.path
+      rescue Errno::ENOENT
+      end
+      track.path = nil
+      if not track.buylink
+        track.buylink = lastfm_get_buylink(track.artist, track.title)
+      end
+      track.save
+    end
   end
 end
 
@@ -143,7 +144,9 @@ post '/new' do
   # Lookup the tags, pull artwork from Last.fm, and save the resource
   begin
     tags = TagLib2::File.new("files/#{track_tempfile[:name]}")
-  rescue TagLib2::BadFile
+  rescue TagLib2::BadFile => e
+    logger.info "TagLib2::BadFile exception: #{e.inspect}"
+    logger.info "Request: #{rack.env}"
     return "Could not process the ID3 tags on that file."
   end
   if tags.title.to_s.empty? || tags.artist.to_s.empty? || tags.album.to_s.empty?
