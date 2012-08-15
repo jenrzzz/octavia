@@ -40,6 +40,7 @@ class Track
   property :buylink,        String, :length => 255
   property :date_uploaded,  DateTime
   property :delete_key,     String
+  property :plays,          Integer, :default => 0
 end
 
 class Lastfm::MethodCategory::Track
@@ -160,6 +161,7 @@ post '/new' do
   @track.delete_key = generate_delete_key
   flash[:deletekey] = @track.delete_key
   @track.buylink = lastfm_get_buylink @track.artist, @track.title
+  @track.plays = 0
   if not @track.save
     puts "---------- error saving #{@track.title} ------------ "
     @track.errors.each do |e|
@@ -179,6 +181,11 @@ get '/:id' do
     return "Could not find a track with that ID. It may have been deleted."
   end
   @title = "#{@track.title} by #{@track.artist}"
+  unless session[:last_played] == @track.id
+    session[:last_played] = @track.id
+    @track.plays += 1
+    @track.save!
+  end
   erb :track
 end
 

@@ -51,5 +51,6 @@
             </form>
         </p>
         <p><label>Permalink</label><input class="span2 uneditable-input" type="text" value="<%= "http://#{request.host}/#{@track.id}" %>" /></p>
+        <p>Played <%= @track.plays %> time<%= 's' unless @track.plays == 1 %></p>
     </div>
 </div>
