@@ -173,7 +173,7 @@ post '/new' do
   @track.artist = tags.artist.to_s[(0..1023)]
   @track.album = tags.album.to_s[(0..1023)]
   @track.artwork = lastfm_get_artwork tags.artist.to_s, tags.album.to_s
-  @track.path = "files/#{track_tempfile[:id]}_#{tags.title.to_s.gsub(/ /, '_')}#{track_tempfile[:ext]}"[(0..255)]
+  @track.path = "files/#{track_tempfile[:id]}_#{tags.title.to_s.gsub(/ /, '_')}#{track_tempfile[:ext]}"[(0..254)]
   @track.date_uploaded = Time.now
   @track.delete_key = generate_delete_key
   flash[:deletekey] = @track.delete_key
