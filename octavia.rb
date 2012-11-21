@@ -221,9 +221,13 @@ delete '/:id' do
     flash[:error] = "The provided delete key was incorrect."
     redirect "/#{params[:id]}"
   end
-  FileUtils.rm(File.join('files', File.basename(@track.path)))
+  begin
+    FileUtils.rm(File.join('files', File.basename(@track.path)))
+  rescue Errno::ENOENT
+    flash[:d_info] = "Track file did not exist."
+  end
   if @track.destroy
-    flash[:info] = "Successfully deleted #{@track.title} by #{@track.artist}."
+    flash[:info] = "Successfully deleted #{@track.title} by #{@track.artist}." + flash[:d_info]
     redirect "/"
   else
     status 500
