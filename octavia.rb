@@ -50,6 +50,22 @@ class Lastfm::MethodCategory::Track
   end
 end
 
+def scavenge_tracks
+  old_tracks = Track.all :date_uploaded.lt => (Time.now - 60 * 60 * 24 * 30) # tracks > 30 days old
+  old_tracks.each do |track|
+    next if track.buylink
+    begin
+      FileUtils.rm(File.join('files', File.basename(track.path))) if track.path
+    rescue Errno::ENOENT
+    end
+    track.path = nil
+    if not track.buylink
+      track.buylink = lastfm_get_buylink(track.artist, track.title)
+    end
+    track.save
+  end
+end
+
 helpers do
   def lastfm_get_artwork(artist, album)
     begin
@@ -100,22 +116,6 @@ helpers do
       end
     end
     return buylinks['iTunes'] || buylinks['Amazon MP3']
-  end
-
-  def scavenge_tracks
-    old_tracks = Track.all :date_uploaded.lt => (Time.now - 60 * 60 * 24 * 30) # tracks > 30 days old
-    old_tracks.each do |track|
-      next if track.buylink
-      begin
-        FileUtils.rm(File.join('files', File.basename(track.path))) if track.path
-      rescue Errno::ENOENT
-      end
-      track.path = nil
-      if not track.buylink
-        track.buylink = lastfm_get_buylink(track.artist, track.title)
-      end
-      track.save
-    end
   end
 end
 
