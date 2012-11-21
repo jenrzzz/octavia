@@ -33,9 +33,9 @@ use Rack::Logger
 class Track
   include DataMapper::Resource
   property :id,             Serial
-  property :title,          String, :length => 255
-  property :artist,         String, :length => 255
-  property :album,          String, :length => 255
+  property :title,          String, :length => 1024
+  property :artist,         String, :length => 1024
+  property :album,          String, :length => 1024
   property :artwork,        String, :length => 255
   property :path,           String, :length => 255
   property :buylink,        String, :length => 255
@@ -71,6 +71,20 @@ helpers do
 
   def generate_delete_key
     ('a'..'z').to_a.shuffle[0,8].join
+  end
+
+  def protected!
+      unless authorized?
+        response['WWW-Authenticate'] = %(Basic realm="ideabox v0.2")
+        throw :halt, [401, "Not authorized\n"]
+      end
+  end
+
+  def authorized?
+      authorized = YAML::load(IO.read(File.join(File.dirname(__FILE__), 'auth.yml')))
+      @auth ||= Rack::Auth::Basic::Request.new(request.env)
+      valid = @auth.provided? && @auth.basic? && @auth.credentials && authorized.include?(@auth.credentials[0])
+      valid && authorized[@auth.credentials[0]] == @auth.credentials[1]
   end
 
   def lastfm_get_buylink(artist, title)
@@ -155,9 +169,9 @@ post '/new' do
     return "Could not process the ID3 tags on that track."
   end
   @track = Track.new
-  @track.title = tags.title.to_s
-  @track.artist = tags.artist.to_s
-  @track.album = tags.album.to_s
+  @track.title = tags.title.to_s[(0..1023)]
+  @track.artist = tags.artist.to_s[(0..1023)]
+  @track.album = tags.album.to_s[(0..1023)]
   @track.artwork = lastfm_get_artwork tags.artist.to_s, tags.album.to_s
   @track.path = "files/#{track_tempfile[:id]}_#{tags.title.to_s.gsub(/ /, '_')}#{track_tempfile[:ext]}"
   @track.date_uploaded = Time.now
