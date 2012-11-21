@@ -227,7 +227,7 @@ delete '/:id' do
     flash[:d_info] = "Track file did not exist."
   end
   if @track.destroy
-    flash[:info] = "Successfully deleted #{@track.title} by #{@track.artist}." + flash[:d_info]
+    flash[:info] = "Successfully deleted #{@track.title} by #{@track.artist}." + (flash[:d_info] || "")
     redirect "/"
   else
     status 500
