@@ -15,7 +15,7 @@
 </div>&nbsp;
 <div class="row">
     <div class="span2">
-        <img src="<%= @track.artwork %>" alt="<%= @track.album %>" />
+        <img src="<%= @track.artwork or "/img/artwork_missing.png" %>" alt="<%= @track.album %>" />
     </div>
     <div class="span4 well" style="padding-bottom: 10px;">
         <table class="table table-condensed">
