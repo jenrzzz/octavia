@@ -53,7 +53,6 @@ end
 def scavenge_tracks
   old_tracks = Track.all :date_uploaded.lt => (Time.now - 60 * 60 * 24 * 30) # tracks > 30 days old
   old_tracks.each do |track|
-    next if track.buylink
     begin
       FileUtils.rm(File.join('files', File.basename(track.path))) if track.path
     rescue Errno::ENOENT
