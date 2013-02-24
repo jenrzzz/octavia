@@ -40,6 +40,7 @@ class Track
   property :artwork,        String, :length => 255
   property :path,           String, :length => 255
   property :buylink,        String, :length => 255
+  property :deleted,        Boolean, :default => false
   property :date_uploaded,  DateTime
   property :delete_key,     String
   property :plays,          Integer, :default => 0
@@ -91,7 +92,7 @@ helpers do
 
   def protected!
       unless authorized?
-        response['WWW-Authenticate'] = %(Basic realm="ideabox v0.2")
+        response['WWW-Authenticate'] = %(Basic realm="octavia v0.3")
         throw :halt, [401, "Not authorized\n"]
       end
   end
@@ -193,7 +194,7 @@ end
 
 get '/:id/?:slug?' do
   @track = Track.get params[:id].to_i
-  if not @track
+  if not @track || @track.deleted
     status 404
     return "Could not find a track with that ID. It may have been deleted."
   end
@@ -208,7 +209,7 @@ end
 
 delete '/:id' do
   @track = Track.get params[:id].to_i
-  if not @track
+  if not @track || @track.deleted
     status 404
     return <<-END
       <html><head><title>Missing track</title></head><body>
@@ -226,7 +227,8 @@ delete '/:id' do
   rescue Errno::ENOENT
     flash[:d_info] = "Track file did not exist."
   end
-  if @track.destroy
+  @track.deleted = true
+  if @track.save
     flash[:info] = "Successfully deleted #{@track.title} by #{@track.artist}." + (flash[:d_info] || "")
     redirect "/"
   else
