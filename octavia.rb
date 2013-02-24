@@ -194,7 +194,7 @@ end
 
 get '/:id/?:slug?' do
   @track = Track.get params[:id].to_i
-  if not @track || @track.deleted
+  if !@track || @track.deleted
     status 404
     return "Could not find a track with that ID. It may have been deleted."
   end
@@ -209,7 +209,7 @@ end
 
 delete '/:id' do
   @track = Track.get params[:id].to_i
-  if not @track || @track.deleted
+  if !@track || @track.deleted
     status 404
     return <<-END
       <html><head><title>Missing track</title></head><body>
