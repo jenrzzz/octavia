@@ -24,7 +24,8 @@ $LAST_FM = Lastfm.new(APP_SETTINGS['lastfm']['key'], APP_SETTINGS['lastfm']['sec
 $LAST_FM_TOKEN = $LAST_FM.auth.get_token
 
 configure do
-  enable :static, :sessions
+  enable :static
+  use Rack::Session::Cookie, :secret => APP_SETTINGS['session']['secret']
 end
 
 set :protection, :except => :session_hijacking
@@ -105,14 +106,14 @@ helpers do
   def lastfm_get_buylink(artist, title)
     begin
       links = $LAST_FM.track.get_buylinks :artist => artist, :track => title, :country => 'United States'
-    rescue Lastfm::ApiError => e
+    rescue Lastfm::ApiError
       return nil
     end
     buylinks = {}
     links['downloads']['affiliation'].each do |affiliate|
         if ['Amazon MP3', 'iTunes'].include? affiliate['supplierName']
-        buylinks[affiliate['supplierName'].to_s] = affiliate['buyLink']
-      end
+            buylinks[affiliate['supplierName'].to_s] = affiliate['buyLink']
+        end
     end
     return buylinks['iTunes'] || buylinks['Amazon MP3']
   end
@@ -180,17 +181,17 @@ post '/new' do
   @track.plays = 0
   if not @track.save
     puts "---------- error saving #{@track.title} ------------ "
-    @track.errors.each do |e|
-      puts e.to_s
+    @track.errors.each do |err|
+      puts err.to_s
     end
     status 500
     return 'Unable to save new track.'
   end
   FileUtils.mv "files/#{track_tempfile[:name]}", @track.path
-  redirect "/#{@track.id}"
+  redirect "/#{@track.id}/#{@track.title.to_s.gsub(/[^0-9A-Za-z\._-]/, '-')}-#{@track.artist.to_s.gsub(/[^0-9A-Za-z\._-]/, '-')}"
 end
 
-get '/:id' do
+get '/:id/?:slug?' do
   @track = Track.get params[:id].to_i
   if not @track
     status 404
