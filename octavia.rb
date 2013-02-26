@@ -193,6 +193,7 @@ post '/new' do
 end
 
 get '/:id/?:slug?' do
+  pass if params[:slug] =~ /.+\.(mp3|m4a)/
   @track = Track.get params[:id].to_i
   if !@track || @track.deleted
     status 404
