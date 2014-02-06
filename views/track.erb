@@ -14,10 +14,10 @@
     </div>
 </div>&nbsp;
 <div class="row">
-    <div class="span2">
+    <div class="span3">
         <img src="<%= @track.artwork or "/img/artwork_missing.png" %>" alt="<%= @track.album %>" />
     </div>
-    <div class="span4 well" style="padding-bottom: 10px;">
+    <div class="span4 well">
         <table class="table table-condensed">
             <tr><td><strong>Title</strong></td><td><%= @track.title %></td></tr>
             <tr><td><strong>Artist</strong></td><td><%= @track.artist %></td></tr>
@@ -35,10 +35,7 @@
     </div>
 </div>
 <div class="row">
-    <div class="span2">
-        &nbsp;
-    </div>
-    <div class="span4 well">
+    <div class="span4 offset3 well">
         <% if @track.path %>
             <p><a class="btn btn-primary" href="<%= '/' + @track.path %>">Download track</a></p>
         <% end %>
