@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head profile="http://w3.org/2005/10/profile">
+    <head profile="http://w3.org/2005/10/profile" prefix="og: http://ogp.me/ns#">
         <title><%= @title || 'Page' %> &mdash; Octavia</title>
         <link rel="stylesheet" type="text/css" href="/styles/bootstrap.min.css" />
         <link rel="stylesheet" type="text/css" href="/styles/bootstrap-responsive.min.css" />
@@ -12,6 +12,9 @@
         <link rel="icon" type="image/vnd.microsoft.icon" href="/favicon.ico" />
         <% if @track %>
           <link rel="image_src" href="<%= @track.artwork or "/img/artwork_missing.png" %>" />
+          <meta property="og:title" content="<%= @title %>" />
+          <meta property="og:url" content="http://octavia.jfave.com/<%= @track.id %>" />
+          <meta property="og:image" content="http://octavia.jfave.com/<%= @track.artwork %>" />
         <% end %>
     </head>
     <body>
