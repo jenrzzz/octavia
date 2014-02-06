@@ -74,13 +74,17 @@ helpers do
     rescue Lastfm::ApiError
       return "/img/artwork_missing.png"
     end
-    info['image'].each do |item|
-      if item['size'] == 'extralarge' && item['content']
-        return item['content'].strip
-      end
-    end
-    if not info['image'].empty?
-      return info['image'][0]['content']
+
+    return "/img/artwork_missing.png" if info['image'].empty?
+
+    image_uri = info['image'].select {|i| i['content'] && i['size'] == 'extralarge' }.first || info['image'][0]
+    image_uri = image_uri['content']
+    image_uri.strip!
+
+    image_name = "#{artist}-#{album}.png".gsub(/[^a-zA-Z0-9_\.]/, '-')
+    image_path = File.expand_path(File.join('public', 'album_art', image_name))
+    if system('wget', '-O', image_path, image_uri)
+      "/album_art/#{image_name}"
     else
       "/img/artwork_missing.png"
     end
@@ -88,6 +92,10 @@ helpers do
 
   def generate_delete_key
     ('a'..'z').to_a.shuffle[0,8].join
+  end
+
+  def track_album_art_filename(track)
+    "#{track.artist}-#{track.album}.png".gsub(/[^a-zA-Z0-9_\.]/, '-')
   end
 
   def protected!
