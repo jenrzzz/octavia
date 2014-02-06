@@ -10,6 +10,9 @@
         
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <link rel="icon" type="image/vnd.microsoft.icon" href="/favicon.ico" />
+        <% if @track %>
+          <link rel="image_src" href="<%= @track.artwork or "/img/artwork_missing.png" %>" />
+        <% end %>
     </head>
     <body>
         <div class="container">
