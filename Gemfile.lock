@@ -72,7 +72,6 @@ GEM
     rack (1.4.1)
     rack-protection (1.2.0)
       rack
-    ruby-taglib2 (1.02)
     rufus-scheduler (2.0.17)
       tzinfo (>= 0.3.23)
     sinatra (1.3.3)
@@ -82,6 +81,7 @@ GEM
     sinatra-flash (0.3.0)
       sinatra (>= 1.0.0)
     stringex (1.4.0)
+    taglib-ruby (0.6.0)
     thin (1.5.0)
       daemons (>= 1.0.9)
       eventmachine (>= 0.12.6)
@@ -100,8 +100,8 @@ DEPENDENCIES
   datamapper
   dm-sqlite-adapter
   lastfm
-  ruby-taglib2
   rufus-scheduler
   sinatra
   sinatra-flash
+  taglib-ruby
   thin

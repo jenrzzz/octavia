@@ -1,7 +1,7 @@
 require 'sinatra'
 require 'sinatra/flash'
 require 'data_mapper'
-require 'taglib2'
+require 'taglib'
 require 'lastfm'
 require 'yaml'
 require 'xmlsimple'
@@ -166,38 +166,36 @@ post '/new' do
   end
 
   # Lookup the tags, pull artwork from Last.fm, and save the resource
-  begin
-    tags = TagLib2::File.new("files/#{track_tempfile[:name]}")
-  rescue TagLib2::BadFile => e
-    logger.info "TagLib2::BadFile exception: #{e.inspect}"
-    logger.info "Request: #{rack.env}"
-    return "Could not process the ID3 tags on that file."
-  end
-  if tags.title.to_s.empty? || tags.artist.to_s.empty? || tags.album.to_s.empty?
-    status 400
-    return "Could not process the ID3 tags on that track."
-  end
-  @track = Track.new
-  @track.title = tags.title.to_s[(0..1023)]
-  @track.artist = tags.artist.to_s[(0..1023)]
-  @track.album = tags.album.to_s[(0..1023)]
-  @track.artwork = lastfm_get_artwork tags.artist.to_s, tags.album.to_s
-  @track.path = "files/#{track_tempfile[:id]}_#{tags.title.to_s.gsub(/[^0-9A-Za-z\._-]/, '_')[0..50]}#{track_tempfile[:ext]}"
-  @track.date_uploaded = Time.now
-  @track.delete_key = generate_delete_key
-  flash[:deletekey] = @track.delete_key
-  @track.buylink = lastfm_get_buylink @track.artist, @track.title
-  @track.plays = 0
-  if not @track.save
-    puts "---------- error saving #{@track.title} ------------ "
-    @track.errors.each do |err|
-      puts err.to_s
+  TagLib::FileRef.open("files/#{track_tempfile[:name]}") do |fileref|
+    if fileref.null? || [:title, :artist, :album].any? {|tag| fileref.tag.send(tag).to_s.empty? }
+      status 400
+      return "Could not process the ID3 tags on that track."
     end
-    status 500
-    return 'Unable to save new track.'
+
+    tags = fileref.tag
+    @track = Track.new
+    @track.title = tags.title.to_s[(0..1023)]
+    @track.artist = tags.artist.to_s[(0..1023)]
+    @track.album = tags.album.to_s[(0..1023)]
+    @track.artwork = lastfm_get_artwork tags.artist.to_s, tags.album.to_s
+    @track.path = "files/#{track_tempfile[:id]}_#{tags.title.to_s.gsub(/[^0-9A-Za-z\._-]/, '_')[0..50]}#{track_tempfile[:ext]}"
+    @track.date_uploaded = Time.now
+    @track.delete_key = generate_delete_key
+    flash[:deletekey] = @track.delete_key
+    @track.buylink = lastfm_get_buylink @track.artist, @track.title
+    @track.plays = 0
+    if not @track.save
+      puts "---------- error saving #{@track.title} ------------ "
+      @track.errors.each do |err|
+        puts err.to_s
+      end
+      status 500
+      return 'Unable to save new track.'
+    end
+    FileUtils.mv "files/#{track_tempfile[:name]}", @track.path
+
+    redirect "/#{@track.id}/#{@track.title.to_s.gsub(/[^0-9A-Za-z\._-]/, '-')}-#{@track.artist.to_s.gsub(/[^0-9A-Za-z\._-]/, '-')}"
   end
-  FileUtils.mv "files/#{track_tempfile[:name]}", @track.path
-  redirect "/#{@track.id}/#{@track.title.to_s.gsub(/[^0-9A-Za-z\._-]/, '-')}-#{@track.artist.to_s.gsub(/[^0-9A-Za-z\._-]/, '-')}"
 end
 
 get '/:id/?:slug?' do
