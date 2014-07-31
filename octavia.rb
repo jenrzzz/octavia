@@ -79,6 +79,7 @@ helpers do
 
     image_uri = info['image'].select {|i| i['content'] && i['size'] == 'extralarge' }.first || info['image'][0]
     image_uri = image_uri['content']
+    return "/img/artwork_missing.png" if image_uri.nil? || image_uri.empty?
     image_uri.strip!
 
     image_name = "#{artist}-#{album}.png".gsub(/[^a-zA-Z0-9_\.]/, '-')
