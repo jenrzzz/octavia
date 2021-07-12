@@ -7,7 +7,7 @@ GEM
       minitest (~> 5.1)
       thread_safe (~> 0.1)
       tzinfo (~> 1.1)
-    addressable (2.7.0)
+    addressable (2.8.0)
       public_suffix (>= 2.0.2, < 5.0)
     bcrypt-ruby (3.0.1)
     concurrent-ruby (1.1.5)
@@ -79,7 +79,7 @@ GEM
     minitest (5.12.2)
     multi_json (1.14.1)
     multi_xml (0.6.0)
-    public_suffix (4.0.1)
+    public_suffix (4.0.6)
     rack (1.6.12)
     rack-protection (1.5.5)
       rack
